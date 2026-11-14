@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteItem, fetchItems } from "./api.ts";
 import { formatMoney } from "../shared/config.ts";
@@ -6,14 +7,24 @@ import type { Item } from "../shared/types.ts";
 interface Props {
   editingId: string | null;
   onEdit: (item: Item) => void;
+  onDeleted: (id: string) => void;
 }
 
-export function ItemList({ editingId, onEdit }: Props) {
+const actionBtn = "rounded px-2 py-1 text-ink-2 hover:bg-page hover:text-ink disabled:opacity-50";
+
+export function ItemList({ editingId, onEdit, onDeleted }: Props) {
   const queryClient = useQueryClient();
   const items = useQuery({ queryKey: ["items"], queryFn: fetchItems });
+  // Confirmation happens inline in the row: native confirm() dialogs are
+  // suppressed in some embedded browsers, which silently cancelled deletes.
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const remove = useMutation({
     mutationFn: deleteItem,
-    onSuccess: () => queryClient.invalidateQueries(),
+    onSuccess: (_, id) => {
+      setConfirmingId(null);
+      onDeleted(id);
+      return queryClient.invalidateQueries();
+    },
   });
 
   const rows = items.data ?? [];
@@ -58,24 +69,49 @@ export function ItemList({ editingId, onEdit }: Props) {
                   {formatMoney(Math.abs(it.amountMinor))}
                 </td>
                 <td className="whitespace-nowrap py-2 pr-6 text-right">
-                  <button
-                    type="button"
-                    className="rounded px-2 py-1 text-ink-2 hover:bg-page hover:text-ink"
-                    onClick={() => onEdit(it)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded px-2 py-1 text-ink-2 hover:bg-page hover:text-ink disabled:opacity-50"
-                    disabled={remove.isPending}
-                    onClick={() => {
-                      const what = `${it.category} (${formatMoney(Math.abs(it.amountMinor))} a month)`;
-                      if (window.confirm(`Delete ${what}? This can't be undone.`)) remove.mutate(it.id);
-                    }}
-                  >
-                    Delete
-                  </button>
+                  {confirmingId === it.id ? (
+                    <span className="inline-flex items-center gap-1" role="group" aria-label={`Delete ${it.category}?`}>
+                      <span className="mr-1 text-ink-2">Delete?</span>
+                      <button
+                        type="button"
+                        className="rounded bg-ink px-2 py-1 font-medium text-page hover:opacity-90 disabled:opacity-50"
+                        disabled={remove.isPending}
+                        onClick={() => remove.mutate(it.id)}
+                        autoFocus
+                      >
+                        {remove.isPending ? "Deleting…" : "Yes, delete"}
+                      </button>
+                      <button
+                        type="button"
+                        className={actionBtn}
+                        disabled={remove.isPending}
+                        onClick={() => setConfirmingId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <>
+                      <button type="button" className={actionBtn} onClick={() => onEdit(it)}>
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className={actionBtn}
+                        onClick={() => {
+                          remove.reset();
+                          setConfirmingId(it.id);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                  {remove.isError && remove.variables === it.id && (
+                    <div role="alert" className="mt-1 text-xs text-error">
+                      Couldn't delete: {remove.error.message}
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

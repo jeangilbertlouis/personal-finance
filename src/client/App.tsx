@@ -42,7 +42,11 @@ export function App() {
               <>
                 <Overview data={sankey.data} />
                 <section className="rounded-xl border border-line bg-surface">
-                  <ItemList editingId={editing?.id ?? null} onEdit={setEditing} />
+                  <ItemList
+                    editingId={editing?.id ?? null}
+                    onEdit={setEditing}
+                    onDeleted={(id) => setEditing((cur) => (cur?.id === id ? null : cur))}
+                  />
                 </section>
               </>
             )}
