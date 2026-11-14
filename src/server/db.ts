@@ -2,7 +2,8 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
-import type { CategoryUsage, Item, ItemInput } from "../shared/types.ts";
+import { SettingsSchema, type CategoryUsage, type Item, type ItemInput, type Settings } from "../shared/types.ts";
+import { DEFAULT_CURRENCY } from "../shared/currency.ts";
 
 export const DEFAULT_DB_PATH = resolve(process.env.FINANCE_DB ?? "data/finance.db");
 
@@ -17,6 +18,10 @@ export function openDb(path: string = DEFAULT_DB_PATH): DatabaseSync {
       description  TEXT NOT NULL DEFAULT '',
       amount_minor INTEGER NOT NULL,
       created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS settings (
+      key   TEXT PRIMARY KEY,
+      value TEXT NOT NULL
     );
   `);
   migrateDatedTransactions(db);
@@ -103,4 +108,22 @@ export function listCategories(db: DatabaseSync): CategoryUsage[] {
     )
     .all() as unknown as CategoryUsage[];
   return rows.map((r) => ({ name: r.name, kind: r.kind, count: Number(r.count) }));
+}
+
+const DEFAULT_SETTINGS: Settings = { currency: DEFAULT_CURRENCY };
+
+/** Stored settings merged over defaults; unknown or invalid values fall back to the default. */
+export function getSettings(db: DatabaseSync): Settings {
+  const rows = db.prepare(`SELECT key, value FROM settings`).all() as unknown as { key: string; value: string }[];
+  const stored = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const parsed = SettingsSchema.safeParse({ ...DEFAULT_SETTINGS, ...stored });
+  return parsed.success ? parsed.data : DEFAULT_SETTINGS;
+}
+
+export function saveSettings(db: DatabaseSync, settings: Settings): Settings {
+  const stmt = db.prepare(
+    `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+  );
+  for (const [key, value] of Object.entries(settings)) stmt.run(key, String(value));
+  return getSettings(db);
 }

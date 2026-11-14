@@ -22,7 +22,7 @@ npm run dev    # API on 127.0.0.1:8787, web UI on http://localhost:5180
 ## Layout
 
 ```
-src/shared/   zod schemas, types, currency formatting (CURRENCY in config.ts)
+src/shared/   zod schemas, types, currencies (GBP/USD/EUR/SEK), amount parsing
 src/server/   Hono API (monthly item CRUD), SQLite (node:sqlite), Sankey aggregation
 src/client/   React UI: entry form, item list, totals, Sankey (d3-sankey)
 tests/        Vitest

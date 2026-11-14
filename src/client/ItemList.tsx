@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { deleteItem, fetchItems } from "./api.ts";
-import { formatMoney } from "../shared/config.ts";
+import { useFormatMoney } from "./currency.tsx";
 import type { Item } from "../shared/types.ts";
 
 interface Props {
@@ -14,6 +14,7 @@ const actionBtn = "rounded px-2 py-1 text-ink-2 hover:bg-page hover:text-ink dis
 
 export function ItemList({ editingId, onEdit, onDeleted }: Props) {
   const queryClient = useQueryClient();
+  const formatMoney = useFormatMoney();
   const items = useQuery({ queryKey: ["items"], queryFn: fetchItems });
   // Confirmation happens inline in the row: native confirm() dialogs are
   // suppressed in some embedded browsers, which silently cancelled deletes.

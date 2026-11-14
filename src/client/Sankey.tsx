@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { sankey, sankeyLinkHorizontal, type SankeyLink, type SankeyNode } from "d3-sankey";
 import type { SankeyNodeDatum, SankeyNodeKind, SankeyResponse } from "../shared/types.ts";
-import { formatMoney } from "../shared/config.ts";
+import { useFormatMoney } from "./currency.tsx";
 
 type Node = SankeyNode<SankeyNodeDatum, object>;
 type Link = SankeyLink<SankeyNodeDatum, object>;
@@ -36,6 +36,7 @@ interface Tooltip {
 
 export function Sankey({ data }: { data: SankeyResponse }) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const formatMoney = useFormatMoney();
   const [width, setWidth] = useState(960);
   const [hover, setHover] = useState<string | null>(null);
   const [tip, setTip] = useState<Tooltip | null>(null);

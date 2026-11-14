@@ -120,3 +120,19 @@ describe("migration from dated transactions", () => {
     }
   });
 });
+
+describe("settings API", () => {
+  it("defaults to GBP and persists a new currency", async () => {
+    const { call } = setup();
+    expect(await (await call("/api/settings")).json()).toEqual({ currency: "GBP" });
+    const put = await call("/api/settings", { method: "PUT", body: JSON.stringify({ currency: "SEK" }) });
+    expect(await put.json()).toEqual({ currency: "SEK" });
+    expect(await (await call("/api/settings")).json()).toEqual({ currency: "SEK" });
+  });
+
+  it("rejects unsupported currencies", async () => {
+    const { call } = setup();
+    const res = await call("/api/settings", { method: "PUT", body: JSON.stringify({ currency: "JPY" }) });
+    expect(res.status).toBe(400);
+  });
+});

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type { DatabaseSync } from "node:sqlite";
-import { ItemInputSchema } from "../shared/types.ts";
-import { createItem, deleteItem, listCategories, listItems, updateItem } from "./db.ts";
+import { ItemInputSchema, SettingsSchema } from "../shared/types.ts";
+import { createItem, deleteItem, getSettings, listCategories, listItems, saveSettings, updateItem } from "./db.ts";
 import { buildSankey } from "./aggregate.ts";
 
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
@@ -27,6 +27,14 @@ export function createApp(db: DatabaseSync) {
   });
 
   app.get("/health", (c) => c.json({ ok: true }));
+
+  app.get("/settings", (c) => c.json(getSettings(db)));
+
+  app.put("/settings", async (c) => {
+    const parsed = SettingsSchema.safeParse(await c.req.json().catch(() => null));
+    if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
+    return c.json(saveSettings(db, parsed.data));
+  });
 
   app.get("/sankey", (c) => c.json(buildSankey(listItems(db))));
 

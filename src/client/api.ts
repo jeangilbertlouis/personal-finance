@@ -1,4 +1,4 @@
-import type { CategoryUsage, Item, ItemInput, SankeyResponse } from "../shared/types.ts";
+import type { CategoryUsage, Item, ItemInput, SankeyResponse, Settings } from "../shared/types.ts";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, init);
@@ -29,3 +29,6 @@ export const updateItem = (id: string, input: ItemInput) =>
   request<Item>(`/api/items/${encodeURIComponent(id)}`, json("PUT", input));
 export const deleteItem = (id: string) =>
   request<void>(`/api/items/${encodeURIComponent(id)}`, { method: "DELETE" });
+
+export const fetchSettings = () => request<Settings>("/api/settings");
+export const saveSettings = (settings: Settings) => request<Settings>("/api/settings", json("PUT", settings));

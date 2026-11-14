@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CurrencyCodeSchema } from "./currency.ts";
 
 /**
  * One recurring monthly amount, e.g. "Salary £3,200" or "Rent £1,150".
@@ -47,3 +48,8 @@ export interface SankeyResponse {
   totals: { incomeMinor: number; expensesMinor: number; netMinor: number };
   itemCount: number;
 }
+
+export const SettingsSchema = z.object({
+  currency: CurrencyCodeSchema,
+});
+export type Settings = z.infer<typeof SettingsSchema>;

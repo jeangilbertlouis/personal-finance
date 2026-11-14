@@ -4,7 +4,7 @@ import { fetchSankey } from "./api.ts";
 import { Sankey, SankeyLegend } from "./Sankey.tsx";
 import { ItemForm } from "./ItemForm.tsx";
 import { ItemList } from "./ItemList.tsx";
-import { formatMoney } from "../shared/config.ts";
+import { CurrencyPicker, useFormatMoney } from "./currency.tsx";
 import type { Item, SankeyResponse } from "../shared/types.ts";
 
 export function App() {
@@ -14,9 +14,12 @@ export function App() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">Personal finance</h1>
-        <p className="text-sm text-ink-3">A typical month: where the money comes from, and where it goes.</p>
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Personal finance</h1>
+          <p className="text-sm text-ink-3">A typical month: where the money comes from, and where it goes.</p>
+        </div>
+        <CurrencyPicker />
       </header>
 
       {sankey.isError ? (
@@ -58,6 +61,7 @@ export function App() {
 }
 
 function Overview({ data }: { data: SankeyResponse }) {
+  const formatMoney = useFormatMoney();
   const { incomeMinor, expensesMinor, netMinor } = data.totals;
   const rate = incomeMinor > 0 ? (netMinor / incomeMinor) * 100 : 0;
   return (
@@ -104,6 +108,7 @@ function StatTile({ label, value, note }: { label: string; value: string; note?:
 }
 
 function FlowTable({ data }: { data: SankeyResponse }) {
+  const formatMoney = useFormatMoney();
   const income = data.totals.incomeMinor;
   const rows = data.links.map((l) => {
     const node = data.nodes.find((n) => n.id === (l.source === "budget" ? l.target : l.source))!;
