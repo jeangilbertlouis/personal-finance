@@ -1,12 +1,12 @@
 # Personal finance
 
 Local-only app for visualising personal income and spending as Sankey diagrams.
+Everything is entered by hand in the web UI. There is no bank import.
 
 ## Quick start
 
 ```bash
 npm install
-npm run seed   # loads 12 months of sample data into data/finance.db
 npm run dev    # API on 127.0.0.1:8787, web UI on http://localhost:5180
 ```
 
@@ -15,7 +15,6 @@ npm run dev    # API on 127.0.0.1:8787, web UI on http://localhost:5180
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Hono API (`tsx watch`) + Vite dev server together |
-| `npm run seed` | Replaces the sample accounts' rows; real data is untouched |
 | `npm test` | Vitest unit + API tests |
 | `npm run typecheck` | `tsc` over client, server and tests |
 
@@ -23,17 +22,17 @@ npm run dev    # API on 127.0.0.1:8787, web UI on http://localhost:5180
 
 ```
 src/shared/   zod schemas, types, currency formatting (CURRENCY in config.ts)
-src/server/   Hono API, SQLite (node:sqlite), Sankey aggregation, sample data
-src/client/   React UI: period picker, totals, Sankey (d3-sankey), table view
+src/server/   Hono API (transaction CRUD), SQLite (node:sqlite), Sankey aggregation
+src/client/   React UI: entry form, transaction list, period picker, Sankey (d3-sankey)
 tests/        Vitest
-data/         SQLite DB and raw exports. Gitignored, never committed.
+data/         SQLite DB. Gitignored, never committed.
 ```
 
 ## Privacy
 
-- The API binds to `127.0.0.1` only.
-- `data/`, `*.db`, `*.csv`, `*.ofx` and `*.qfx` are gitignored, so bank exports
-  never reach git.
+- The API binds to `127.0.0.1` only, rejects non-local `Host` headers, and only
+  accepts writes sent as JSON, so other websites open in your browser can't change your data.
+- `data/` and `*.db` are gitignored, so your entries never reach git.
 
 ## Environment
 

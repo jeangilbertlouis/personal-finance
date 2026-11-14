@@ -20,6 +20,7 @@
   --flow-budget: #8a8984;
   --link-opacity: 0.32;
   --link-opacity-hover: 0.6;
+  --text-error: #b42318;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,6 +39,7 @@
     --flow-budget: #77766f;
     --link-opacity: 0.38;
     --link-opacity-hover: 0.7;
+  --text-error: #f97066;
   }
 }
 :root[data-theme="dark"] {
@@ -55,6 +57,7 @@
   --flow-budget: #77766f;
   --link-opacity: 0.38;
   --link-opacity-hover: 0.7;
+  --text-error: #f97066;
 }
 
 @theme inline {
@@ -64,6 +67,7 @@
   --color-ink: var(--text-primary);
   --color-ink-2: var(--text-secondary);
   --color-ink-3: var(--text-muted);
+  --color-error: var(--text-error);
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 

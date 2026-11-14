@@ -10,6 +10,6 @@ const app = createApp(db);
 serve({ fetch: app.fetch, port, hostname: "127.0.0.1" }, () => {
   console.log(`API listening on http://127.0.0.1:${port} (db: ${DEFAULT_DB_PATH})`);
   if (listMonths(db).length === 0) {
-    console.log("Database is empty — run `npm run seed` to load sample data.");
+    console.log("No transactions yet — add some in the web UI.");
   }
 });

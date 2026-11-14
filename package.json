@@ -7,7 +7,6 @@
     "dev": "concurrently -k -n api,web -c blue,green \"npm:dev:api\" \"npm:dev:web\"",
     "dev:api": "tsx watch src/server/index.ts",
     "dev:web": "vite",
-    "seed": "tsx src/server/seed.ts",
     "build": "tsc && vite build",
     "typecheck": "tsc",
     "test": "vitest run"

@@ -49,3 +49,22 @@ export interface PeriodsResponse {
   /** Distinct YYYY-MM months that have data, newest first. */
   months: string[];
 }
+
+/** What the entry form sends. The server assigns the id; account defaults to "Manual". */
+export const TransactionInputSchema = z.object({
+  date: isoDate,
+  amountMinor: z
+    .number()
+    .int()
+    .refine((n) => n !== 0, "amount can't be zero")
+    .refine((n) => Math.abs(n) <= 1_000_000_000_00, "amount is too large"),
+  description: z.string().trim().max(200).default(""),
+  category: z.string().trim().min(1, "category is required").max(60),
+});
+export type TransactionInput = z.infer<typeof TransactionInputSchema>;
+
+export interface CategoryUsage {
+  name: string;
+  kind: "income" | "expense";
+  count: number;
+}
