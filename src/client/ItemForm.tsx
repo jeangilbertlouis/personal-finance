@@ -1,6 +1,7 @@
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createItem, fetchCategories, updateItem } from "./api.ts";
+import { CategoryInput } from "./CategoryInput.tsx";
 import { minorToInput, parseAmountToMinor } from "../shared/money.ts";
 import type { Item, ItemInput } from "../shared/types.ts";
 
@@ -15,7 +16,6 @@ interface Props {
 export function ItemForm({ editing, onDone }: Props) {
   const queryClient = useQueryClient();
   const categories = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
-  const listId = useId();
   const amountRef = useRef<HTMLInputElement>(null);
 
   // The parent remounts this form (via `key`) when `editing` changes, so the
@@ -48,15 +48,18 @@ export function ItemForm({ editing, onDone }: Props) {
     e.preventDefault();
     const minor = parseAmountToMinor(amount);
     if (minor === null) return setError("Enter an amount greater than zero, like 42 or 42.50.");
-    if (!category.trim()) return setError("Choose or type a category.");
+    const typed = category.trim();
+    if (!typed) return setError("Choose or type a category.");
+    // "groceries" and "Groceries" would split one Sankey node in two, so reuse
+    // the spelling of an existing category when only the case differs.
+    const existing = (categories.data ?? []).find((c) => c.name.toLowerCase() === typed.toLowerCase());
     save.mutate({
       amountMinor: kind === "income" ? minor : -minor,
-      category: category.trim(),
+      category: existing?.name ?? typed,
       description: description.trim(),
     });
   };
 
-  const suggestions = (categories.data ?? []).filter((c) => c.kind === kind);
   const field = "w-full rounded-md border border-line bg-page px-3 py-2 text-ink";
 
   return (
@@ -114,19 +117,14 @@ export function ItemForm({ editing, onDone }: Props) {
 
       <label className="block space-y-1 text-sm text-ink-2">
         <span>Category</span>
-        <input
+        <CategoryInput
           className={field}
-          list={listId}
-          placeholder={kind === "income" ? "e.g. Salary" : "e.g. Groceries"}
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          maxLength={60}
+          onChange={setCategory}
+          categories={categories.data ?? []}
+          preferKind={kind}
+          placeholder={kind === "income" ? "e.g. Salary" : "e.g. Groceries"}
         />
-        <datalist id={listId}>
-          {suggestions.map((c) => (
-            <option key={c.name} value={c.name} />
-          ))}
-        </datalist>
       </label>
 
       <label className="block space-y-1 text-sm text-ink-2">
