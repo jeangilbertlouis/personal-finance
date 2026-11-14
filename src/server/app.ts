@@ -1,14 +1,7 @@
 import { Hono } from "hono";
 import type { DatabaseSync } from "node:sqlite";
-import { PeriodQuerySchema, TransactionInputSchema, type PeriodsResponse } from "../shared/types.ts";
-import {
-  createTransaction,
-  deleteTransaction,
-  listCategories,
-  listMonths,
-  listTransactions,
-  updateTransaction,
-} from "./db.ts";
+import { ItemInputSchema } from "../shared/types.ts";
+import { createItem, deleteItem, listCategories, listItems, updateItem } from "./db.ts";
 import { buildSankey } from "./aggregate.ts";
 
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/;
@@ -35,37 +28,27 @@ export function createApp(db: DatabaseSync) {
 
   app.get("/health", (c) => c.json({ ok: true }));
 
-  app.get("/periods", (c) => c.json<PeriodsResponse>({ months: listMonths(db) }));
+  app.get("/sankey", (c) => c.json(buildSankey(listItems(db))));
 
   app.get("/categories", (c) => c.json(listCategories(db)));
 
-  app.get("/sankey", (c) => {
-    const parsed = PeriodQuerySchema.safeParse(c.req.query());
+  app.get("/items", (c) => c.json(listItems(db)));
+
+  app.post("/items", async (c) => {
+    const parsed = ItemInputSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
-    return c.json(buildSankey(listTransactions(db, parsed.data)));
+    return c.json(createItem(db, parsed.data), 201);
   });
 
-  app.get("/transactions", (c) => {
-    const parsed = PeriodQuerySchema.safeParse(c.req.query());
+  app.put("/items/:id", async (c) => {
+    const parsed = ItemInputSchema.safeParse(await c.req.json().catch(() => null));
     if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
-    return c.json(listTransactions(db, parsed.data));
-  });
-
-  app.post("/transactions", async (c) => {
-    const parsed = TransactionInputSchema.safeParse(await c.req.json().catch(() => null));
-    if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
-    return c.json(createTransaction(db, parsed.data), 201);
-  });
-
-  app.put("/transactions/:id", async (c) => {
-    const parsed = TransactionInputSchema.safeParse(await c.req.json().catch(() => null));
-    if (!parsed.success) return c.json({ error: parsed.error.issues }, 400);
-    const updated = updateTransaction(db, c.req.param("id"), parsed.data);
+    const updated = updateItem(db, c.req.param("id"), parsed.data);
     return updated ? c.json(updated) : c.json({ error: "not found" }, 404);
   });
 
-  app.delete("/transactions/:id", (c) =>
-    deleteTransaction(db, c.req.param("id")) ? c.body(null, 204) : c.json({ error: "not found" }, 404),
+  app.delete("/items/:id", (c) =>
+    deleteItem(db, c.req.param("id")) ? c.body(null, 204) : c.json({ error: "not found" }, 404),
   );
 
   return app;

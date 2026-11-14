@@ -86,7 +86,7 @@ export function Sankey({ data }: { data: SankeyResponse }) {
         width={width}
         height={height}
         role="img"
-        aria-label="Sankey diagram of income flowing into the budget and out to spending categories and savings"
+        aria-label="Sankey diagram of a typical month: income flowing into the budget and out to spending categories and what is left over"
         onMouseLeave={() => {
           setHover(null);
           setTip(null);
@@ -213,7 +213,7 @@ export function SankeyLegend({ hasDeficit }: { hasDeficit: boolean }) {
   const items: { label: string; fill: string }[] = [
     { label: "Income", fill: KIND_COLOR.income },
     { label: "Spending", fill: KIND_COLOR.expense },
-    hasDeficit ? { label: "From savings", fill: "url(#legend-hatch)" } : { label: "Saved", fill: KIND_COLOR.savings },
+    hasDeficit ? { label: "Shortfall", fill: "url(#legend-hatch)" } : { label: "Left over", fill: KIND_COLOR.savings },
   ];
   return (
     <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-ink-2" aria-label="Legend">

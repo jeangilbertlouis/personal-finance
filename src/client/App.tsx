@@ -1,70 +1,25 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { fetchPeriods, fetchSankey } from "./api.ts";
-import { buildPeriodOptions } from "./periods.ts";
+import { fetchSankey } from "./api.ts";
 import { Sankey, SankeyLegend } from "./Sankey.tsx";
-import { TransactionForm } from "./TransactionForm.tsx";
-import { TransactionList } from "./TransactionList.tsx";
+import { ItemForm } from "./ItemForm.tsx";
+import { ItemList } from "./ItemList.tsx";
 import { formatMoney } from "../shared/config.ts";
-import type { SankeyResponse, Transaction } from "../shared/types.ts";
+import type { Item, SankeyResponse } from "../shared/types.ts";
 
 export function App() {
-  const periods = useQuery({ queryKey: ["periods"], queryFn: fetchPeriods });
-  const options = useMemo(() => buildPeriodOptions(periods.data?.months ?? []), [periods.data]);
-  const flat = [...options.all, ...options.years, ...options.months];
-  const [periodKey, setPeriodKey] = useState("last12");
-  const period = flat.find((o) => o.key === periodKey) ?? flat[0]!;
-  const [editing, setEditing] = useState<Transaction | null>(null);
-
-  const sankey = useQuery({
-    queryKey: ["sankey", period.query],
-    queryFn: () => fetchSankey(period.query),
-    enabled: periods.isSuccess,
-    placeholderData: (prev) => prev,
-  });
-
-  const hasAnyData = (periods.data?.months.length ?? 0) > 0;
+  const sankey = useQuery({ queryKey: ["sankey"], queryFn: fetchSankey, placeholderData: (prev) => prev });
+  const [editing, setEditing] = useState<Item | null>(null);
+  const hasItems = (sankey.data?.itemCount ?? 0) > 0;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Personal finance</h1>
-          <p className="text-sm text-ink-3">Where the money came from, and where it went.</p>
-        </div>
-        {hasAnyData && (
-          <label className="flex items-center gap-2 text-sm text-ink-2">
-            Period
-            <select
-              className="rounded-md border border-line bg-surface px-3 py-1.5 text-ink"
-              value={period.key}
-              onChange={(e) => setPeriodKey(e.target.value)}
-            >
-              {options.all.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-              <optgroup label="Year">
-                {options.years.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Month">
-                {options.months.map((o) => (
-                  <option key={o.key} value={o.key}>
-                    {o.label}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          </label>
-        )}
+      <header className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">Personal finance</h1>
+        <p className="text-sm text-ink-3">A typical month: where the money comes from, and where it goes.</p>
       </header>
 
-      {periods.isError || sankey.isError ? (
+      {sankey.isError ? (
         <Notice title="Can't reach the API">
           Start everything with <code className="font-mono">npm run dev</code>, which runs the API on port 8787 alongside
           this page.
@@ -72,30 +27,24 @@ export function App() {
       ) : (
         <div className="grid items-start gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
           <aside className="rounded-xl border border-line bg-surface p-5 lg:sticky lg:top-6">
-            <TransactionForm key={editing?.id ?? "new"} editing={editing} onDone={() => setEditing(null)} />
+            <ItemForm key={editing?.id ?? "new"} editing={editing} onDone={() => setEditing(null)} />
           </aside>
 
           <main className="min-w-0 space-y-6">
-            {!periods.isSuccess ? (
+            {!sankey.data ? (
               <div className="h-96 animate-pulse rounded-xl bg-surface" />
-            ) : !hasAnyData ? (
+            ) : !hasItems ? (
               <Notice title="Nothing entered yet">
-                Add your income and expenses with the form. The cash-flow diagram appears as soon as there's something
-                to show.
+                Add what comes in and goes out in a typical month: salary, rent, bills, groceries and so on. The
+                cash-flow diagram appears as soon as there's something to show.
               </Notice>
             ) : (
-              sankey.data && <Overview data={sankey.data} />
-            )}
-
-            {hasAnyData && (
-              <section className="rounded-xl border border-line bg-surface">
-                <TransactionList
-                  period={period.query}
-                  periodLabel={period.label}
-                  editingId={editing?.id ?? null}
-                  onEdit={setEditing}
-                />
-              </section>
+              <>
+                <Overview data={sankey.data} />
+                <section className="rounded-xl border border-line bg-surface">
+                  <ItemList editingId={editing?.id ?? null} onEdit={setEditing} />
+                </section>
+              </>
             )}
           </main>
         </div>
@@ -109,38 +58,32 @@ function Overview({ data }: { data: SankeyResponse }) {
   const rate = incomeMinor > 0 ? (netMinor / incomeMinor) * 100 : 0;
   return (
     <>
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="Totals">
-        <StatTile label="Income" value={formatMoney(incomeMinor)} />
-        <StatTile label="Spending" value={formatMoney(expensesMinor)} />
+      <section className="grid gap-4 sm:grid-cols-3" aria-label="Monthly totals">
+        <StatTile label="Income per month" value={formatMoney(incomeMinor)} />
+        <StatTile label="Spending per month" value={formatMoney(expensesMinor)} />
         <StatTile
-          label={netMinor >= 0 ? "Saved" : "Drawn from savings"}
+          label={netMinor >= 0 ? "Left over per month" : "Shortfall per month"}
           value={formatMoney(Math.abs(netMinor))}
           note={
             incomeMinor <= 0
               ? undefined
               : netMinor >= 0
                 ? `${rate.toFixed(1)}% of income`
-                : `Spent ${Math.abs(rate).toFixed(1)}% more than earned`
+                : `Spending is ${Math.abs(rate).toFixed(1)}% more than income`
           }
         />
       </section>
 
       <section className="rounded-xl border border-line bg-surface p-4 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-medium">Cash flow</h2>
-          {data.links.length > 0 && <SankeyLegend hasDeficit={netMinor < 0} />}
+          <h2 className="font-medium">Monthly cash flow</h2>
+          <SankeyLegend hasDeficit={netMinor < 0} />
         </div>
-        {data.links.length > 0 ? (
-          <>
-            <Sankey data={data} />
-            <details className="mt-4 border-t border-line pt-3">
-              <summary className="cursor-pointer text-sm text-ink-2">Table view</summary>
-              <FlowTable data={data} />
-            </details>
-          </>
-        ) : (
-          <p className="py-16 text-center text-ink-3">No transactions in this period.</p>
-        )}
+        <Sankey data={data} />
+        <details className="mt-4 border-t border-line pt-3">
+          <summary className="cursor-pointer text-sm text-ink-2">Table view</summary>
+          <FlowTable data={data} />
+        </details>
       </section>
     </>
   );
@@ -162,7 +105,7 @@ function FlowTable({ data }: { data: SankeyResponse }) {
     const node = data.nodes.find((n) => n.id === (l.source === "budget" ? l.target : l.source))!;
     return { node, value: l.value };
   });
-  const kindLabel = { income: "Income", expense: "Spending", savings: "Saved", deficit: "From savings", budget: "" };
+  const kindLabel = { income: "Income", expense: "Spending", savings: "Left over", deficit: "Shortfall", budget: "" };
   return (
     <div className="overflow-x-auto">
       <table className="mt-2 w-full text-sm">
@@ -170,7 +113,7 @@ function FlowTable({ data }: { data: SankeyResponse }) {
           <tr className="border-b border-line">
             <th className="py-2 font-normal">Category</th>
             <th className="py-2 font-normal">Type</th>
-            <th className="py-2 text-right font-normal">Amount</th>
+            <th className="py-2 text-right font-normal">Per month</th>
             <th className="py-2 text-right font-normal">% of income</th>
           </tr>
         </thead>

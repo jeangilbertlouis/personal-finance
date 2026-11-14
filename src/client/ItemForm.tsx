@@ -1,23 +1,18 @@
 import { useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createTransaction, fetchCategories, updateTransaction } from "./api.ts";
+import { createItem, fetchCategories, updateItem } from "./api.ts";
 import { minorToInput, parseAmountToMinor } from "../shared/money.ts";
-import type { Transaction, TransactionInput } from "../shared/types.ts";
+import type { Item, ItemInput } from "../shared/types.ts";
 
 type Kind = "expense" | "income";
 
-const today = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
-
 interface Props {
-  /** When set, the form edits this transaction instead of adding a new one. */
-  editing: Transaction | null;
+  /** When set, the form edits this item instead of adding a new one. */
+  editing: Item | null;
   onDone: () => void;
 }
 
-export function TransactionForm({ editing, onDone }: Props) {
+export function ItemForm({ editing, onDone }: Props) {
   const queryClient = useQueryClient();
   const categories = useQuery({ queryKey: ["categories"], queryFn: fetchCategories });
   const listId = useId();
@@ -27,7 +22,6 @@ export function TransactionForm({ editing, onDone }: Props) {
   // initial state is all the syncing we need.
   const [kind, setKind] = useState<Kind>(editing && editing.amountMinor > 0 ? "income" : "expense");
   const [amount, setAmount] = useState(editing ? minorToInput(editing.amountMinor) : "");
-  const [date, setDate] = useState(editing?.date ?? today());
   const [category, setCategory] = useState(editing?.category ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +34,7 @@ export function TransactionForm({ editing, onDone }: Props) {
   };
 
   const save = useMutation({
-    mutationFn: (input: TransactionInput) =>
-      editing ? updateTransaction(editing.id, input) : createTransaction(input),
+    mutationFn: (input: ItemInput) => (editing ? updateItem(editing.id, input) : createItem(input)),
     onSuccess: async () => {
       reset();
       onDone();
@@ -57,7 +50,6 @@ export function TransactionForm({ editing, onDone }: Props) {
     if (minor === null) return setError("Enter an amount greater than zero, like 42 or 42.50.");
     if (!category.trim()) return setError("Choose or type a category.");
     save.mutate({
-      date,
       amountMinor: kind === "income" ? minor : -minor,
       category: category.trim(),
       description: description.trim(),
@@ -70,7 +62,7 @@ export function TransactionForm({ editing, onDone }: Props) {
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
       <div className="flex items-center justify-between">
-        <h2 className="font-medium">{editing ? "Edit transaction" : "Add transaction"}</h2>
+        <h2 className="font-medium">{editing ? "Edit monthly item" : "Add monthly item"}</h2>
         {editing && (
           <button
             type="button"
@@ -107,24 +99,18 @@ export function TransactionForm({ editing, onDone }: Props) {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="space-y-1 text-sm text-ink-2">
-          <span>Amount</span>
-          <input
-            ref={amountRef}
-            className={field}
-            inputMode="decimal"
-            placeholder="0.00"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            autoFocus
-          />
-        </label>
-        <label className="space-y-1 text-sm text-ink-2">
-          <span>Date</span>
-          <input className={field} type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-        </label>
-      </div>
+      <label className="block space-y-1 text-sm text-ink-2">
+        <span>Amount per month</span>
+        <input
+          ref={amountRef}
+          className={field}
+          inputMode="decimal"
+          placeholder="0.00"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          autoFocus
+        />
+      </label>
 
       <label className="block space-y-1 text-sm text-ink-2">
         <span>Category</span>
@@ -149,6 +135,7 @@ export function TransactionForm({ editing, onDone }: Props) {
         </span>
         <input
           className={field}
+          placeholder={kind === "income" ? "e.g. Day job" : "e.g. Netflix"}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           maxLength={200}
