@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# Personal financial data never goes into git.
+data/*
+!data/.gitkeep
+*.db
+*.db-*
+*.csv
+*.ofx
+*.qfx
+
+.env
+.env.*
